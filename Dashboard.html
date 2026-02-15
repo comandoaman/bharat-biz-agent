@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bharat Bizz-Agent</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: { 
+                extend: {
+                    colors: {
+                        'cyber-black': '#020204',
+                        'cyber-panel': '#0a0a12',
+                        'neon-blue': '#00f3ff',
+                        'neon-purple': '#bc13fe',
+                        'neon-green': '#0aff0a',
+                        'alert-red': '#ff003c',
+                        'warn-yellow': '#facc15',
+                    },
+                    fontFamily: {
+                        'hud': ['"Orbitron"', 'sans-serif'],
+                        'mono': ['"Share Tech Mono"', 'monospace'],
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'spin-slow': 'spin 10s linear infinite',
+                        'grid-move': 'gridMove 20s linear infinite',
+                        'flash': 'flash 0.5s',
+                    },
+                    keyframes: {
+                        gridMove: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '40px 40px' },
+                        },
+                        flash: {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: 0.5 },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* --- CORE VISUALS --- */
+        body {
+            background-color: #020204;
+            /* Moving Cyber Grid Background */
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                radial-gradient(circle at 50% 50%, rgba(0, 10, 20, 0) 0%, #020204 100%);
+            background-size: 40px 40px, 40px 40px, 100% 100%;
+            animation: gridMove 60s linear infinite;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        /* CRT Scanline Overlay */
+        .scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 999;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            opacity: 0.4;
+        }
+
+        /* Advanced HUD Border */
+        .tech-border {
+            position: relative;
+            background: rgba(10, 10, 18, 0.75);
+            border: 1px solid rgba(0, 243, 255, 0.15);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.05), inset 0 0 20px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            /* Chamfered corners using clip-path */
+            clip-path: polygon(
+                15px 0, 100% 0, 
+                100% calc(100% - 15px), calc(100% - 15px) 100%, 
+                0 100%, 0 15px
+            );
+        }
+
+        /* Decorative Corner Accents */
+        .tech-border::after {
+            content: '';
+            position: absolute;
+            bottom: 0; right: 0;
+            width: 30px; height: 30px;
+            background: linear-gradient(135deg, transparent 15px, rgba(0, 243, 255, 0.3) 15px);
+            pointer-events: none;
+        }
+
+        .tech-border::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 10px; height: 10px;
+            border-top: 2px solid #00f3ff;
+            border-left: 2px solid #00f3ff;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #00f3ff; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #fff; }
+
+        .neon-text-shadow { text-shadow: 0 0 8px rgba(0, 243, 255, 0.8); }
+        
+        /* Interactive Elements */
+        .btn-control:hover { 
+            background: rgba(0, 243, 255, 0.2); 
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.4); 
+            border-color: #00f3ff;
+            color: #fff;
+        }
+        .btn-control:active { transform: scale(0.95); }
+
+        /* Toast Notification */
+        #toast-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .toast {
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #00f3ff;
+            color: #00f3ff;
+            padding: 8px 16px;
+            font-family: 'Share Tech Mono';
+            font-size: 12px;
+            clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+            animation: slideUp 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col font-sans selection:bg-neon-blue selection:text-black scanlines">
+
+    <header class="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-cyber-panel/90 backdrop-blur-md z-50 relative">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 border border-neon-blue flex items-center justify-center relative bg-black/50">
+                <i class="fas fa-network-wired text-neon-blue text-xl animate-pulse"></i>
+                <div class="absolute -top-1 -left-1 w-2 h-2 bg-neon-blue"></div>
+                <div class="absolute -bottom-1 -right-1 w-2 h-2 bg-neon-blue"></div>
+                <div class="absolute -top-1 -right-1 w-2 h-2 bg-neon-blue"></div>
+                <div class="absolute -bottom-1 -left-1 w-2 h-2 bg-neon-blue"></div>
+            </div>
+            <div>
+                <h1 class="font-hud text-2xl tracking-widest text-white uppercase font-bold italic">
+                    BHARAT<span class="text-neon-blue">BIZZ-AGENT</span> <span class="text-xs not-italic text-gray-500 font-normal">v5.0</span>
+                </h1>
+                <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    <p class="text-[10px] font-mono text-neon-blue/60 tracking-[0.3em]">SYSTEM ONLINE // SECURE</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3 bg-black/60 px-4 py-2 border border-white/10 rounded-sm clip-polygon">
+                <div class="flex flex-col items-end">
+                    <span id="connectionText" class="text-[10px] font-mono font-bold text-warn-yellow">INITIALIZING</span>
+                    <span class="text-[8px] text-gray-500 font-mono">DATA STREAM</span>
+                </div>
+                
+                <label class="relative inline-flex items-center cursor-pointer group">
+                    <input type="checkbox" id="modeToggle" class="sr-only peer">
+                    <div class="w-10 h-5 bg-gray-900 peer-focus:outline-none border border-gray-600 peer-checked:bg-neon-blue/10 peer-checked:border-neon-blue transition-colors"></div>
+                    <span class="absolute left-0.5 top-0.5 bg-gray-500 border border-gray-700 h-4 w-4 transition-all peer-checked:translate-x-full peer-checked:bg-neon-blue peer-checked:border-white shadow-[0_0_10px_rgba(0,243,255,0.5)]"></span>
+                </label>
+                
+                <div id="statusDot" class="w-2 h-2 rounded-full bg-warn-yellow shadow-[0_0_8px_orange]"></div>
+            </div>
+
+            <a href="https://t.me/ChokkarBot" target="_blank" class="group relative px-6 py-2 bg-neon-blue/5 border border-neon-blue/30 text-neon-blue font-mono text-xs hover:bg-neon-blue hover:text-black transition-all duration-300 overflow-hidden">
+                <div class="absolute inset-0 bg-neon-blue/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
+                <i class="fab fa-telegram-plane mr-2 relative z-10"></i> <span class="relative z-10 font-bold tracking-wider">OPEN TERMINAL</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 lg:p-6 grid grid-cols-12 grid-rows-6 gap-6 overflow-hidden relative z-10">
+        
+        <div class="col-span-12 lg:col-span-8 row-span-6 flex flex-col gap-6">
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 h-32">
+                <div class="tech-border p-4 flex flex-col justify-between group bg-gradient-to-br from-cyber-panel to-transparent">
+                    <div class="flex justify-between items-start">
+                        <i class="fas fa-wallet text-neon-blue opacity-70"></i>
+                        <span class="text-[9px] font-mono tracking-widest text-neon-blue opacity-60">NET_REVENUE</span>
+                    </div>
+                    <div class="text-right">
+                        <h3 class="text-2xl lg:text-3xl font-hud text-white neon-text-shadow tracking-wider" id="totalRevenue">₹0</h3>
+                    </div>
+                    <div class="w-full bg-gray-800 h-0.5 mt-2 overflow-hidden">
+                        <div class="bg-neon-blue h-full w-[75%] shadow-[0_0_10px_#00f3ff] animate-pulse"></div>
+                    </div>
+                </div>
+
+                <div class="tech-border p-4 flex flex-col justify-between group">
+                    <div class="flex justify-between items-start">
+                        <i class="fas fa-cube text-neon-purple opacity-70"></i>
+                        <span class="text-[9px] font-mono tracking-widest text-neon-purple opacity-60">TOTAL_ORDERS</span>
+                    </div>
+                    <div class="text-right">
+                        <h3 class="text-2xl lg:text-3xl font-hud text-white" style="text-shadow: 0 0 10px #bc13fe" id="totalOrders">0</h3>
+                    </div>
+                    <div class="w-full bg-gray-800 h-0.5 mt-2">
+                        <div class="bg-neon-purple h-full w-[45%] shadow-[0_0_10px_#bc13fe]"></div>
+                    </div>
+                </div>
+
+                <div class="tech-border p-4 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute inset-0 bg-green-500/5 z-0"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <i class="fas fa-microchip text-neon-green opacity-70"></i>
+                        <span class="text-[9px] font-mono tracking-widest text-neon-green opacity-60">CPU_LOAD</span>
+                    </div>
+                    <div class="flex items-end justify-between relative z-10 mt-2">
+                        <div class="flex gap-1 h-8 items-end">
+                            <div class="w-1 bg-neon-green/30 h-[40%]"></div>
+                            <div class="w-1 bg-neon-green/50 h-[60%]"></div>
+                            <div class="w-1 bg-neon-green/70 h-[30%]"></div>
+                            <div class="w-1 bg-neon-green h-[80%]"></div>
+                            <div class="w-1 bg-neon-green h-[50%]"></div>
+                        </div>
+                        <span class="font-mono text-xl text-neon-green">34%</span>
+                    </div>
+                </div>
+
+                <div class="tech-border p-4 flex flex-col justify-between bg-alert-red/5 border-alert-red/30">
+                    <div class="flex justify-between items-start opacity-80">
+                        <i class="fas fa-exclamation-triangle text-alert-red animate-pulse"></i>
+                        <span class="text-[9px] font-mono tracking-widest text-alert-red">ALERTS</span>
+                    </div>
+                    <div class="text-right">
+                        <h3 class="text-2xl lg:text-3xl font-hud text-alert-red" style="text-shadow: 0 0 5px #ff003c" id="lowStockCount">0</h3>
+                    </div>
+                    <p class="text-[9px] text-alert-red/70 font-mono text-right mt-1">CRITICAL_LEVELS</p>
+                </div>
+            </div>
+
+            <div class="tech-border flex-1 p-5 relative overflow-hidden flex flex-col">
+                <div class="flex justify-between items-center mb-2 border-b border-white/5 pb-2">
+                    <h3 class="font-mono text-neon-blue text-sm flex items-center gap-2">
+                        <i class="fas fa-chart-area"></i> REVENUE_STREAM_ANALYSIS
+                    </h3>
+                    <div class="flex gap-2">
+                        <span class="w-2 h-2 bg-neon-blue rounded-full animate-pulse"></span>
+                        <span class="text-[10px] font-mono text-gray-400">LIVE</span>
+                    </div>
+                </div>
+                
+                <div class="relative flex-1 w-full">
+                    <div class="absolute inset-0 border-t border-b border-white/5" style="background-image: linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .05) 75%, rgba(255, 255, 255, .05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .05) 75%, rgba(255, 255, 255, .05) 76%, transparent 77%, transparent); background-size: 50px 50px;"></div>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-span-12 lg:col-span-4 row-span-6 flex flex-col gap-6 h-full">
+            
+            <div class="tech-border flex-[2] flex flex-col overflow-hidden">
+                <div class="p-3 bg-white/5 border-b border-white/10 flex flex-col gap-2">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-mono text-xs text-neon-blue font-bold tracking-wider">
+                            <i class="fas fa-boxes mr-1"></i> INVENTORY_MATRIX
+                        </h3>
+                        <i class="fas fa-sync-alt text-[10px] text-gray-500 animate-spin-slow"></i>
+                    </div>
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-2 top-1.5 text-gray-500 text-xs"></i>
+                        <input type="text" id="inventorySearch" placeholder="SEARCH NODE..." 
+                            class="w-full bg-black/50 border border-gray-700 text-xs font-mono text-white pl-7 pr-2 py-1 focus:border-neon-blue focus:outline-none focus:shadow-[0_0_5px_#00f3ff] transition-all">
+                    </div>
+                </div>
+
+                <div class="overflow-y-auto flex-1 p-2 custom-scrollbar">
+                    <table class="w-full text-left border-separate border-spacing-y-1">
+                        <thead class="text-[9px] text-gray-500 font-mono uppercase sticky top-0 bg-cyber-panel z-10">
+                            <tr>
+                                <th class="pl-2 pb-2">Item_ID</th>
+                                <th class="text-right pb-2">Val</th>
+                                <th class="text-center pb-2">Cntrl</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody" class="text-xs font-mono">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tech-border flex-1 bg-black flex flex-col relative">
+                <div class="p-2 border-b border-gray-800 flex justify-between items-center bg-gray-900/80 backdrop-blur">
+                    <span class="font-mono text-[10px] text-green-500 font-bold">> SYS_TERMINAL_LOGS</span>
+                    <div class="flex gap-1">
+                        <div class="w-1.5 h-1.5 rounded-full bg-gray-600"></div>
+                        <div class="w-1.5 h-1.5 rounded-full bg-gray-600"></div>
+                    </div>
+                </div>
+                
+                <div id="aiLogs" class="flex-1 p-3 overflow-y-auto font-mono text-[10px] space-y-1.5 text-gray-300 custom-scrollbar relative z-10">
+                    <div class="opacity-50 border-l-2 border-green-900 pl-2">System initialized...</div>
+                </div>
+                
+                <div class="p-2 border-t border-gray-800 flex items-center gap-2 bg-black">
+                    <span class="text-green-500 text-xs font-bold">></span>
+                    <span class="w-1.5 h-3 bg-green-500 animate-pulse block"></span>
+                    <span class="text-[9px] text-gray-600 font-mono">AWAITING_INPUT</span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script>
+        // --- ⚡ CONFIGURATION ---
+        const API_BASE_URL = "http://127.0.0.1:5001"; 
+        
+        // --- Chart Config ---
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(0, 243, 255, 0.4)');
+        gradient.addColorStop(1, 'rgba(0, 243, 255, 0)');
+
+        const revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array(12).fill(''),
+                datasets: [{
+                    label: 'Stream',
+                    data: [0,0,0,0,0,0,0,0,0,0,0,0],
+                    borderColor: '#00f3ff',
+                    backgroundColor: gradient,
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#000',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: {
+                    y: { 
+                        grid: { color: 'rgba(255,255,255,0.03)', borderDash: [4, 4] }, 
+                        ticks: { color: '#6b7280', font: {family: 'Share Tech Mono', size: 9} },
+                        border: { display: false }
+                    },
+                    x: { display: false }
+                },
+                animation: { duration: 0 } // Disable chart animation for performance
+            }
+        });
+
+        // --- Demo Data ---
+        let demoData = {
+            inventory: [
+                { name: "Plasma Rifle Mk.II", price: 4500, stock: 12, max: 20 },
+                { name: "Cyber-Eye Implant", price: 2500, stock: 2, max: 10 },
+                { name: "Neural Processor", price: 8000, stock: 0, max: 5 },
+                { name: "Fusion Cell", price: 350, stock: 45, max: 100 },
+                { name: "Stealth Module", price: 1200, stock: 5, max: 15 },
+                { name: "Titanium Chassis", price: 3000, stock: 8, max: 10 },
+            ],
+            logs: ["Connecting to neural net...", "Waiting for Telegram signal...", "System calibrated."],
+            revenue: 0,
+            orders: 0
+        };
+
+        let lastLogCount = 0;
+        let isDemoMode = true;
+        let searchTerm = ""; // State for search
+
+        // --- 🔎 SEARCH LISTENER ---
+        document.getElementById('inventorySearch').addEventListener('input', (e) => {
+            searchTerm = e.target.value.toLowerCase();
+            updateDashboard(isDemoMode ? demoData : lastFetchedData);
+        });
+
+        // --- 🍞 TOAST NOTIFICATION ---
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // --- 🛠️ STOCK UPDATE FUNCTION ---
+        async function adjustStock(itemName, change) {
+            showToast(`CMD: Updating ${itemName}...`);
+            
+            if (isDemoMode) {
+                const item = demoData.inventory.find(i => i.name === itemName);
+                if (item) {
+                    const newStock = Math.max(0, item.stock + change);
+                    item.stock = newStock;
+                    demoData.logs.push(`[MANUAL] Stock updated: ${itemName} -> ${newStock}`);
+                    updateDashboard(demoData);
+                }
+            } else {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/update-stock`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ item_name: itemName, change: change })
+                    });
+                    
+                    if (!response.ok) throw new Error("Server rejected update");
+                    
+                    const logContainer = document.getElementById('aiLogs');
+                    logContainer.innerHTML += `<div class="border-l border-green-500 pl-2 text-green-400">>> Command sent: Stock ${change > 0 ? '+' : ''}${change}</div>`;
+                    fetchLive();
+                    
+                } catch (e) {
+                    showToast("ERROR: Connection Failed");
+                    const logContainer = document.getElementById('aiLogs');
+                    logContainer.innerHTML += `<div class="border-l border-red-500 pl-2 text-red-400">>> [ERR] Update failed: Server Unreachable</div>`;
+                }
+            }
+        }
+
+        let lastFetchedData = demoData; // Cache for filtering
+
+        function updateDashboard(data) {
+            lastFetchedData = data; // Update cache
+
+            // Update Stats
+            document.getElementById('totalRevenue').innerText = `₹${data.revenue.toLocaleString()}`;
+            document.getElementById('totalOrders').innerText = data.orders;
+            
+            // Inventory Logic with Filtering
+            const tbody = document.getElementById('inventoryTableBody');
+            tbody.innerHTML = '';
+            let totalStock = 0;
+            let lowStock = 0;
+
+            // Filter items based on search term
+            const filteredInventory = data.inventory.filter(item => 
+                item.name.toLowerCase().includes(searchTerm)
+            );
+
+            filteredInventory.forEach(item => {
+                totalStock += item.stock;
+                if(item.stock < 3) lowStock++;
+
+                let stockColor = "text-neon-green";
+                let rowBg = "hover:bg-neon-blue/5";
+                let barColor = "bg-neon-green";
+                let barWidth = Math.min(100, (item.stock / (item.max || 20)) * 100);
+                
+                if(item.stock === 0) {
+                    stockColor = "text-alert-red font-bold";
+                    rowBg = "bg-alert-red/5 hover:bg-alert-red/10";
+                    barColor = "bg-alert-red";
+                    barWidth = 100; // Full bar for alert visibility
+                } else if(item.stock < 3) {
+                    stockColor = "text-warn-yellow";
+                    barColor = "bg-warn-yellow";
+                }
+
+                tbody.innerHTML += `
+                    <tr class="${rowBg} transition-colors group border-b border-gray-800/50">
+                        <td class="pl-2 py-2.5">
+                            <div class="text-gray-300 font-medium group-hover:text-white text-[11px]">${item.name}</div>
+                            <div class="w-full h-0.5 bg-gray-800 mt-1 rounded-full overflow-hidden">
+                                <div class="${barColor} h-full" style="width: ${barWidth}%"></div>
+                            </div>
+                        </td>
+                        <td class="text-right py-2.5 text-neon-blue/80 font-mono">₹${item.price.toLocaleString()}</td>
+                        <td class="py-2.5 text-center">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <button onclick="adjustStock('${item.name}', -1)" class="btn-control w-5 h-5 flex items-center justify-center rounded-sm border border-neon-blue/30 text-neon-blue text-[10px] bg-black/40">-</button>
+                                <span class="${stockColor} w-6 text-center font-bold">${item.stock}</span>
+                                <button onclick="adjustStock('${item.name}', 1)" class="btn-control w-5 h-5 flex items-center justify-center rounded-sm border border-neon-blue/30 text-neon-blue text-[10px] bg-black/40">+</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('lowStockCount').innerText = lowStock;
+
+            // Logs Logic
+            const logContainer = document.getElementById('aiLogs');
+            if(data.logs.length > lastLogCount || (isDemoMode && data.logs.length !== lastLogCount)) {
+                logContainer.innerHTML = '';
+                data.logs.slice(-25).forEach(log => {
+                    let color = "text-gray-400";
+                    let prefix = ">>";
+                    let borderColor = "border-gray-700";
+                    
+                    if(log.includes("ORDER") || log.includes("MANUAL")) { 
+                        color = "text-neon-purple"; 
+                        prefix = "[$$]"; 
+                        borderColor = "border-neon-purple";
+                    }
+                    if(log.includes("FAIL") || log.includes("Error")) { 
+                        color = "text-alert-red"; 
+                        prefix = "[!!]"; 
+                        borderColor = "border-alert-red";
+                    }
+                    
+                    // Add pseudo-timestamp
+                    const now = new Date();
+                    const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+
+                    logContainer.innerHTML += `
+                        <div class="border-l-2 ${borderColor} pl-2 hover:bg-white/5 transition-colors py-0.5">
+                            <span class="text-gray-600 text-[9px] mr-1">[${time}]</span>
+                            <span class="text-neon-blue opacity-50 mr-1 text-[9px]">${prefix}</span> 
+                            <span class="${color}">${log}</span>
+                        </div>`;
+                });
+                logContainer.scrollTop = logContainer.scrollHeight;
+                lastLogCount = data.logs.length;
+            }
+
+            // Chart Update
+            if(data.revenue > 0 || isDemoMode) {
+                const currentData = revenueChart.data.datasets[0].data;
+                currentData.push(data.revenue);
+                currentData.shift();
+                revenueChart.update();
+            }
+        }
+
+        async function fetchLive() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/data`);
+                if(!res.ok) throw new Error();
+                const data = await res.json();
+                
+                updateDashboard(data);
+                
+                // Online State
+                document.getElementById('statusDot').className = "w-2 h-2 rounded-full bg-neon-green shadow-[0_0_10px_#0aff0a] animate-pulse";
+                const txt = document.getElementById('connectionText');
+                txt.innerText = "LIVE FEED";
+                txt.className = "text-[10px] font-mono font-bold text-neon-green tracking-wider";
+
+            } catch (e) {
+                // Error State
+                document.getElementById('statusDot').className = "w-2 h-2 rounded-full bg-alert-red shadow-[0_0_10px_red]";
+                const txt = document.getElementById('connectionText');
+                txt.innerText = "OFFLINE";
+                txt.className = "text-[10px] font-mono font-bold text-alert-red tracking-wider";
+            }
+        }
+
+        function showDemo() {
+            // Simulate random revenue fluctuation
+            const randRev = Math.floor(Math.random() * 5000) + 1000;
+            demoData.revenue = randRev; 
+            updateDashboard(demoData);
+            
+            document.getElementById('statusDot').className = "w-2 h-2 rounded-full bg-warn-yellow shadow-[0_0_8px_orange]";
+            const txt = document.getElementById('connectionText');
+            txt.innerText = "DEMO SIM";
+            txt.className = "text-[10px] font-mono font-bold text-warn-yellow tracking-wider";
+        }
+
+        // Loop - Preserved EXACTLY as requested
+        setInterval(() => {
+            const toggle = document.getElementById('modeToggle');
+            isDemoMode = !toggle.checked; // If unchecked (left), it's Demo. Checked (right) is Live.
+            
+            if(!isDemoMode) {
+                fetchLive();
+            } else {
+                showDemo();
+            }
+        }, 1000);
+
+    </script>
+</body>
+</html>
